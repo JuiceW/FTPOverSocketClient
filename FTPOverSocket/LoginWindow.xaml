@@ -1,0 +1,17 @@
+﻿<Window x:Class="FTPOverSocket.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FTPOverSocket"
+        mc:Ignorable="d"
+        Title="Login" Height="137.453" Width="224.944" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TextBox x:Name="textboxUsername" VerticalContentAlignment="Center" HorizontalAlignment="Left" Height="23" Margin="83,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120" TabIndex="1"/>
+        <Label Content="Username:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <Label Content="Password:" HorizontalAlignment="Left" Margin="10,35,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="buttonLogin" Content="Login" HorizontalAlignment="Left" Margin="10,66,0,0" VerticalAlignment="Top" Width="193" Height="25" Click="ButtonLogin_Click" TabIndex="3"/>
+        <PasswordBox x:Name="passwordboxPassword" HorizontalAlignment="Left" Margin="83,38,0,0" VerticalAlignment="Top" Width="120" Height="23" TabIndex="2"/>
+
+    </Grid>
+</Window>

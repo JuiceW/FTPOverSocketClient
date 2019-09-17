@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FTPOverSocket"
         mc:Ignorable="d"
-        Title="FTPOverSocketClient" Height="470" Width="613">
+        Title="FTPOverSocketClient" Height="470" Width="613" WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
     <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
         <TextBox x:Name="textBoxServerAddress" HorizontalAlignment="Left" Height="25" Margin="119,10,0,0" Text="127.0.0.1" VerticalAlignment="Top" VerticalContentAlignment="Center" Width="136" RenderTransformOrigin="-0.153,0.348" TextDecorations="{x:Null}" TextWrapping="Wrap"/>
         <TextBox x:Name="textBoxPort" HorizontalAlignment="Left" Height="25" Margin="303,10,0,0" TextWrapping="Wrap" Text="9070" VerticalAlignment="Top" VerticalContentAlignment="Center"  Width="120" RenderTransformOrigin="0.5,0.5"/>

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -21,7 +22,7 @@ namespace FTPOverSocket
     /// </summary>
     public partial class MainWindow : Window
     {
-        private SocketService socket;
+        private SocketService socket = SocketService.getInstance();
 
         public MainWindow()
         {
@@ -84,33 +85,42 @@ namespace FTPOverSocket
             Grid.SetColumn(label, column);
         }
 
+        public void Login_Success()
+        {
+            string address = textBoxServerAddress.Text;
+            int port = int.Parse(textBoxPort.Text);
+
+            string[] filenames = this.socket.Dir();
+            int count = 0;
+            for (int i = 0; i < 7; i++)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    if (count == filenames.Length - 1)
+                    {
+                        break;
+                    }
+                    this.DrawFile(i, j, 2, filenames[count]);
+                    count++;
+                }
+            }
+
+            textBoxServerAddress.IsEnabled = false;
+            textBoxPort.IsEnabled = false;
+            buttonConnect.Content = "Disconnect";
+            buttonUpload.IsEnabled = true;
+        }
+
         private void ButtonConnect_Click(object sender, RoutedEventArgs e)
         {
             if (!buttonUpload.IsEnabled)
             {
-                string address = textBoxServerAddress.Text;
-                int port = int.Parse(textBoxPort.Text);
-                this.socket = new SocketService(address, port);
-
-                string[] filenames = this.socket.Dir();
-                int count = 0;
-                for (int i = 0; i < 7; i++)
+                LoginWindow loginWindow = new LoginWindow(textBoxServerAddress.Text, textBoxPort.Text);
+                loginWindow.ShowDialog();
+                if (loginWindow.DialogResult == true)
                 {
-                    for (int j = 0; j < 7; j++)
-                    {
-                        if (count == filenames.Length - 1)
-                        {
-                            break;
-                        }
-                        this.DrawFile(i, j, 2, filenames[count]);
-                        count++;
-                    }
+                    this.Login_Success();
                 }
-
-                textBoxServerAddress.IsEnabled = false;
-                textBoxPort.IsEnabled = false;
-                buttonConnect.Content = "Disconnect";
-                buttonUpload.IsEnabled = true;
             }
             else
             {
@@ -132,11 +142,18 @@ namespace FTPOverSocket
                 string filepath = openFileDlg.FileName;
                 string[] subs = filepath.Split('\\');
                 string filename = subs[subs.Length - 1];
-                this.socket.Upload(filepath, filename);
+                ProgressWindow progress = new ProgressWindow();
+                progress.WindowStartupLocation = WindowStartupLocation.Manual;
+                progress.Left = this.Left + this.Width / 2 - progress.Width / 2;
+                progress.Top = this.Top + this.Height / 2 - progress.Height / 2;
+                
+                progress.Show();
+                this.socket.Upload(filepath, filename, progress);
+                progress.Close();
             }
             else
             {
-                MessageBox.Show("The file path is illegal!");
+                MessageBox.Show("Please choose a legal file!");
             }
             System.Threading.Thread.Sleep(1000);
             gridFiles.Children.RemoveRange(0, int.MaxValue);

@@ -15,12 +15,35 @@ namespace FTPOverSocket.Service
         private const int BUFFER_SIZE = 4096;
         private string address;
         private Socket socket;
+        private static SocketService service;
+        public static SocketService getInstance()
+        {
+            if (service == null)
+            {
+                service = new SocketService();
+            }
+            return service;
+        }
 
-        public SocketService(string address, int port)
+        public SocketService()
+        {
+
+        }
+
+        public bool Connect(string address, int port)
         {
             this.address = address;
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.socket.Connect(new IPEndPoint(IPAddress.Parse(address), port));
+            try
+            {
+                this.socket.Connect(new IPEndPoint(IPAddress.Parse(address), port));
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+                throw;
+            }
         }
 
         public string Check()
@@ -44,8 +67,31 @@ namespace FTPOverSocket.Service
 
         public void Close()
         {
-            socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"quit\"}"));
+            try
+            {
+                socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"quit\"}"));
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             socket.Close();
+            
+        }
+
+        public bool Login(string username, string password)
+        {
+            socket.Send(Encoding.UTF8.GetBytes(username + "??" + password));
+            byte[] bytes = new byte[BUFFER_SIZE];
+            int size = socket.Receive(bytes, bytes.Length, 0);
+            string response = Encoding.UTF8.GetString(bytes, 0, size);
+            if (response.Equals("LOGIN_SUCCESS"))
+            {
+                return true;
+            } else
+            {
+                return false;
+            }
         }
 
         public void Get(string filename)
@@ -53,62 +99,54 @@ namespace FTPOverSocket.Service
             socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"get\",\"filename\":\"" + filename + "\"}"));
             if (File.Exists(@".\files\" + filename))
                 File.Delete(@".\files\" + filename);
-            using (FileStream fs = File.Create(@".\files\" + filename))
+            FileStream fs = File.Create(@".\files\" + filename);
+            using (BinaryWriter writer = new BinaryWriter(fs))
             {
                 byte[] bytes = new byte[BUFFER_SIZE];
+                int count = 0;
                 while (true)
                 {
                     int size = socket.Receive(bytes, bytes.Length, 0);
-                    if (size == 0)
-                    {
-                        fs.Close();
-                        break;
-                    }
-                    fs.Write(bytes, 0, size);
+                    count += 4;
+                    Console.WriteLine(count);
+                    writer.Write(bytes, 0, size);
                     if (size < BUFFER_SIZE)
                     {
-                        fs.Close();
                         break;
                     }
                 }
+                writer.Close();
             }
+            fs.Close();
         }
 
-        public void Upload(string filepath, string filename)
+        public void Upload(string filepath, string filename, ProgressWindow pw)
         {
             socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"upload\",\"filename\":\"" + filename + "\"}"));
-            using (FileStream fs = File.OpenRead(filepath))
+            FileStream fs = File.OpenRead(filepath);
+            using (BinaryReader reader = new BinaryReader(fs))
             {
+                pw.pb.Maximum = 100;
+                pw.pb.Value = 0;
+                pw.DoEvents();
                 byte[] bytes = new byte[BUFFER_SIZE];
-                bool isFirst = true;
-                while (true)
+                while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
-                    int size = fs.Read(bytes, 0, BUFFER_SIZE);
-                    if (isFirst)
+                    int size = reader.Read(bytes, 0, BUFFER_SIZE);
+                    pw.pb.Value = (int)((double)reader.BaseStream.Position/reader.BaseStream.Length*100);
+                    pw.DoEvents();
+                    byte[] toSend = new byte[size];
+                    for (int i = 0; i < size; i++)
                     {
-                        if (size == 0)
-                        {
-                            this.socket.Send(Encoding.UTF8.GetBytes("EMPTYFILE"));
-                            fs.Close();
-                            break;
-                        }
-                        isFirst = false;
+                        toSend[i] = bytes[i];
                     }
-                    if (size == 0)
-                    {
-                        fs.Close();
-                        this.socket.Send(Encoding.UTF8.GetBytes("DONE"));
-                        break;
-                    }
-                    this.socket.Send(bytes);
-                    if (size < BUFFER_SIZE)
-                    {
-                        fs.Close();
-                        this.socket.Send(Encoding.UTF8.GetBytes("DONE"));
-                        break;
-                    }
+                    this.socket.Send(toSend);
                 }
+                System.Threading.Thread.Sleep(500);
+                this.socket.Send(Encoding.UTF8.GetBytes("DONE"));
+                reader.Close();
             }
+            fs.Close();
         }
     }
 }
