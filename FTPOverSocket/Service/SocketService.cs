@@ -94,22 +94,45 @@ namespace FTPOverSocket.Service
             }
         }
 
-        public void Get(string filename)
+        public void Get(string filename, ProgressWindow pw)
         {
             socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"get\",\"filename\":\"" + filename + "\"}"));
             if (File.Exists(@".\files\" + filename))
                 File.Delete(@".\files\" + filename);
             FileStream fs = File.Create(@".\files\" + filename);
+            byte[] bytess = new byte[9];
+            int sizee = socket.Receive(bytess, bytess.Length, 0);
+            string response = Encoding.UTF8.GetString(bytess, 0, sizee);
+            int fileSize = int.Parse(response);
             using (BinaryWriter writer = new BinaryWriter(fs))
             {
-                byte[] bytes = new byte[BUFFER_SIZE];
+                pw.pb.Maximum = fileSize;
+                pw.pb.Value = 0;
+                pw.DoEvents();
                 int count = 0;
+                DateTime lastTime = DateTime.Now;
+                double lastPos = 0;
+                byte[] bytes = new byte[BUFFER_SIZE];
                 while (true)
                 {
+                    count += 1;
+                    if (count >= 200)
+                    {
+                        DateTime nowTime = DateTime.Now;
+                        double diff = (nowTime - lastTime).TotalSeconds;
+                        double pos = pw.pb.Value;
+                        pw.labelSpeed.Content = ((pos - lastPos) / 1024 / diff).ToString("#0.000") + "KB/s";
+                        lastTime = nowTime;
+                        lastPos = pos;
+                        count = 1;
+                    }
                     int size = socket.Receive(bytes, bytes.Length, 0);
                     count += 4;
                     Console.WriteLine(count);
                     writer.Write(bytes, 0, size);
+                    pw.pb.Value += size;
+                    pw.labelStatus.Content = (pw.pb.Value / 1024).ToString("#0") + "/" + (fileSize/1024).ToString() + "KB";
+                    pw.DoEvents();
                     if (size < BUFFER_SIZE)
                     {
                         break;
@@ -129,24 +152,50 @@ namespace FTPOverSocket.Service
                 pw.pb.Maximum = 100;
                 pw.pb.Value = 0;
                 pw.DoEvents();
+                int count = 0;
+                DateTime lastTime = DateTime.Now;
+                long lastPos = 0;
                 byte[] bytes = new byte[BUFFER_SIZE];
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
+                    count += 1;
+                    if (count >= 200)
+                    {
+                        DateTime nowTime = DateTime.Now;
+                        double diff = (nowTime - lastTime).TotalSeconds;
+                        long pos = reader.BaseStream.Position;
+                        pw.labelSpeed.Content = ((pos - lastPos) / diff / 1024).ToString("#0.000") + "KB/s";
+                        lastTime = nowTime;
+                        lastPos = pos;
+                        count = 1;
+                    }
+                    
                     int size = reader.Read(bytes, 0, BUFFER_SIZE);
-                    pw.pb.Value = (int)((double)reader.BaseStream.Position/reader.BaseStream.Length*100);
-                    pw.DoEvents();
                     byte[] toSend = new byte[size];
                     for (int i = 0; i < size; i++)
                     {
                         toSend[i] = bytes[i];
                     }
                     this.socket.Send(toSend);
+
+                    pw.pb.Value = (int)((double)reader.BaseStream.Position / reader.BaseStream.Length * 100);
+                    pw.labelStatus.Content = (reader.BaseStream.Position/1024).ToString("#0") + "/" + (reader.BaseStream.Length/1024).ToString("0") + "KB";
+                    pw.DoEvents();
                 }
                 System.Threading.Thread.Sleep(500);
                 this.socket.Send(Encoding.UTF8.GetBytes("DONE"));
                 reader.Close();
             }
             fs.Close();
+        }
+
+        public string[] Detail(string filename)
+        {
+            socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"detail\",\"filename\":\"" + filename + "\"}"));
+            byte[] bytes = new byte[BUFFER_SIZE];
+            int size = socket.Receive(bytes, bytes.Length, 0);
+            string response = Encoding.UTF8.GetString(bytes, 0, size);
+            return response.Split('?');
         }
     }
 }

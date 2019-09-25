@@ -1,6 +1,7 @@
 ﻿using FTPOverSocket.Service;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -64,7 +65,11 @@ namespace FTPOverSocket
             item4.DataContext = filename + "?Details";
             item4.AddHandler(MenuItem.MouseUpEvent, new MouseButtonEventHandler(Details_Click), true);
             menu.Items.Add(item1);
-            menu.Items.Add(item2);
+            if (type == 1)
+            {
+                item1.Header = "Update";
+                menu.Items.Add(item2);
+            }
             menu.Items.Add(item3);
             menu.Items.Add(item4);
             image.ContextMenu = menu;
@@ -90,25 +95,20 @@ namespace FTPOverSocket
             string address = textBoxServerAddress.Text;
             int port = int.Parse(textBoxPort.Text);
 
-            string[] filenames = this.socket.Dir();
-            int count = 0;
-            for (int i = 0; i < 7; i++)
-            {
-                for (int j = 0; j < 7; j++)
-                {
-                    if (count == filenames.Length - 1)
-                    {
-                        break;
-                    }
-                    this.DrawFile(i, j, 2, filenames[count]);
-                    count++;
-                }
-            }
+            this.Refresh_Grid();
 
             textBoxServerAddress.IsEnabled = false;
             textBoxPort.IsEnabled = false;
             buttonConnect.Content = "Disconnect";
             buttonUpload.IsEnabled = true;
+
+            ContextMenu menu = new ContextMenu();
+            MenuItem item = new MenuItem();
+            item.Header = "Refresh";
+            item.DataContext = "Refresh";
+            item.AddHandler(MenuItem.MouseUpEvent, new MouseButtonEventHandler(Refresh_Click), true);
+            menu.Items.Add(item);
+            gridBackground.ContextMenu = menu;
         }
 
         private void ButtonConnect_Click(object sender, RoutedEventArgs e)
@@ -130,6 +130,7 @@ namespace FTPOverSocket
                 textBoxPort.IsEnabled = true;
                 buttonConnect.Content = "Connect";
                 buttonUpload.IsEnabled = false;
+                gridBackground.ContextMenu = null;
             }
         }
 
@@ -156,6 +157,11 @@ namespace FTPOverSocket
                 MessageBox.Show("Please choose a legal file!");
             }
             System.Threading.Thread.Sleep(1000);
+            this.Refresh_Grid();
+        }
+
+        private void Refresh_Grid()
+        {
             gridFiles.Children.RemoveRange(0, int.MaxValue);
             string[] filenames = this.socket.Dir();
             int count = 0;
@@ -167,7 +173,14 @@ namespace FTPOverSocket
                     {
                         break;
                     }
-                    this.DrawFile(i, j, 2, filenames[count]);
+                    if (File.Exists(@".\files\" + filenames[count]))
+                    {
+                        this.DrawFile(i, j, 1, filenames[count]);
+                    }
+                    else
+                    {
+                        this.DrawFile(i, j, 2, filenames[count]);
+                    }
                     count++;
                 }
             }
@@ -177,7 +190,15 @@ namespace FTPOverSocket
         {
             MenuItem mi = (MenuItem)sender;
             string filename = mi.DataContext.ToString().Split('?')[0];
-            this.socket.Get(filename);
+            ProgressWindow progress = new ProgressWindow();
+            progress.WindowStartupLocation = WindowStartupLocation.Manual;
+            progress.Left = this.Left + this.Width / 2 - progress.Width / 2;
+            progress.Top = this.Top + this.Height / 2 - progress.Height / 2;
+            progress.Show();
+            this.socket.Get(filename, progress);
+            progress.Close();
+            MessageBox.Show("Download finished!");
+            this.Refresh_Grid();
         }
 
         private void Open_Click(object sender, RoutedEventArgs e)
@@ -196,7 +217,38 @@ namespace FTPOverSocket
         private void Details_Click(object sender, RoutedEventArgs e)
         {
             MenuItem mi = (MenuItem)sender;
-            MessageBox.Show(mi.DataContext.ToString());
+            string filename = mi.DataContext.ToString().Split('?')[0];
+            string[] stats = new string[2];
+            stats = SocketService.getInstance().Detail(filename);
+            FileDetailWindow detailWindow = new FileDetailWindow();
+            detailWindow.labelFilename.Content = filename;
+            detailWindow.labelTime.Content = stats[0];
+            detailWindow.labelSize.Content = GetReadableSize(int.Parse(stats[1]));
+            detailWindow.labelBelong.Content = stats[2];
+            detailWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+            detailWindow.Left = this.Left + this.Width / 2 - detailWindow.Width / 2;
+            detailWindow.Top = this.Top + this.Height / 2 - detailWindow.Height / 2;
+            detailWindow.Show();
+        }
+
+        private void Refresh_Click(object sender, RoutedEventArgs e)
+        {
+            MenuItem mi = (MenuItem)sender;
+            this.Refresh_Grid();
+        }
+
+        private string GetReadableSize(int size)
+        {
+            if (size < 1024)
+            {
+                return size.ToString() + "B";
+            } else if (size < 1024 * 1024)
+            {
+                return (size / 1024).ToString() + "KB";
+            } else
+            {
+                return (size / 1024 / 1024).ToString() + "MB";
+            }
         }
     }
 }

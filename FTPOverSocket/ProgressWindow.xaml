@@ -6,10 +6,12 @@
         xmlns:local="clr-namespace:FTPOverSocket"
         xmlns:System="clr-namespace:System;assembly=mscorlib" x:Class="FTPOverSocket.ProgressWindow"
         mc:Ignorable="d"
-        Title="ProgressBar" Height="26" Width="265.334" ResizeMode="NoResize" WindowStyle="None"
+        Title="ProgressBar" Height="45" Width="265.334" ResizeMode="NoResize" WindowStyle="None"
         >
     <Grid>
-        <ProgressBar x:Name="pb" HorizontalAlignment="Center" Height="22" VerticalAlignment="Center" Width="262" Value="0" Maximum="100" Minimum="0">
+        <ProgressBar x:Name="pb" HorizontalAlignment="Center" Height="22" VerticalAlignment="Top" Width="262" Value="0" Maximum="100" Minimum="0" Margin="0,2,0,0">
         </ProgressBar>
+        <Label x:Name="labelSpeed" Content="Label" HorizontalAlignment="Left" Margin="-3,21,0,-2" VerticalAlignment="Top" Height="26"/>
+        <Label x:Name="labelStatus" Content="Label" HorizontalAlignment="Right" Margin="0,21,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Right" Width="137"/>
     </Grid>
 </Window>
