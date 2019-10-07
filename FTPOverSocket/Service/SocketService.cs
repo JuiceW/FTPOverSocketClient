@@ -197,5 +197,17 @@ namespace FTPOverSocket.Service
             string response = Encoding.UTF8.GetString(bytes, 0, size);
             return response.Split('?');
         }
+
+        public bool Remove(string filename)
+        {
+            socket.Send(Encoding.UTF8.GetBytes("{\"action\":\"remove\",\"filename\":\"" + filename + "\"}"));
+            byte[] bytes = new byte[BUFFER_SIZE];
+            int size = socket.Receive(bytes, bytes.Length, 0);
+            string response = Encoding.UTF8.GetString(bytes, 0, size);
+            if (response.Equals("OK"))
+                return true;
+            else
+                return false;
+        }
     }
 }

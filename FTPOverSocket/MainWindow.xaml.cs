@@ -211,7 +211,16 @@ namespace FTPOverSocket
         private void Remove_Click(object sender, RoutedEventArgs e)
         {
             MenuItem mi = (MenuItem)sender;
-            MessageBox.Show(mi.DataContext.ToString());
+            string filename = mi.DataContext.ToString().Split('?')[0];
+            bool isRemoved = SocketService.getInstance().Remove(filename);
+            if (isRemoved)
+            {
+                MessageBox.Show(filename + " has been removed.");
+            } else
+            {
+                MessageBox.Show("Cannot remove " + filename + "!");
+            }
+            this.Refresh_Grid();
         }
 
         private void Details_Click(object sender, RoutedEventArgs e)
